@@ -4,16 +4,17 @@
 #By Andrew Parkinson
 
 
-
 ### Global Variables ###
 
 $date = Get-Date -Format yyyy-MM-dd
 $datetime = Get-Date -Format yyyy-MM-dd---hh-mm
 $day = (get-date).dayofweek
 
-
-
 ### HOW TO USE ###
+
+# This script expects ffmpeg to be added as PATH system environment variable
+# Guide: https://www.thewindowsclub.com/how-to-install-ffmpeg-on-windows-10
+
 
 # 1. Fill out this list of cameras and URLs
 # 2. Define Folder location of Today's captures
@@ -30,8 +31,9 @@ $day = (get-date).dayofweek
 
 $cameraURLArray = (
 
-    [PSCustomObject]@{Name = "Tomago Shed 8";  URL = "http://i.imgur.com/gCSVwkml.jpg"},
-    [PSCustomObject]@{Name = "Carrington"; URL = "http://i.imgur.com/AOgfU1q.jpg"}
+    [PSCustomObject]@{Name = "Tomago Shed 1 South";  URL = "https://---"},
+    [PSCustomObject]@{Name = "Yenorra 1"; URL = "rtsp://---"}
+
 
 )
 
@@ -85,17 +87,17 @@ $retentionDays = 2
 
 
 #Makes sure $today path exists to avoid exception
-If (Test-Path  $today){
+#If (Test-Path  $today){
 
     #Checks $today folder for creation date
-    $creationDate = (Get-Item -Path $today).CreationTime | Get-Date -f yyyy-MM-dd
+#    $creationDate = (Get-Item -Path $today).CreationTime | Get-Date -f yyyy-MM-dd
 
     #If $today folder was created yesterday, delete it
-    If ($creationDate -ne $date) 
-    {
-        Remove-Item $today –recurse -Verbose
-    }
-}
+#    If ($creationDate -ne $date) 
+#    {
+        Remove-Item $today â€“recurse -Verbose
+#    }
+#}
 #
 
 
@@ -112,6 +114,9 @@ If (!(Test-Path $folder)){
 }
 #
 
+# This line removes the need for SSL certificate validation in WebClient https call
+[System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+#
 
 #Invokes the WebClient PS object that is needed to download a file from a url
 #
@@ -134,8 +139,18 @@ foreach($camera in $cameraURLArray) {
     
 
     #Downloads the file
+    #If protocol is HTTP, use WebClient
+    #Else if protocol is RTSP, use ffmpeg
     #
-    $webclient.DownloadFile($camera.URL, $filename)
+    if($camera.URL.StartsWith("h") -or $camera.URL.StartsWith("H")){
+
+        $webclient.DownloadFile($camera.URL, $filename)
+
+    } elseif($camera.URL.StartsWith("r") -or $camera.URL.StartsWith("R")){
+
+        ffmpeg -rtsp_transport tcp -y -i $camera.URL -vframes 1 $filename
+
+    }
     #
 
 
